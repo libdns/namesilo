@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -221,11 +221,11 @@ func doHttpRequestWithXmlResponse(client *http.Client, req *http.Request, resp i
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		respBody, _ := ioutil.ReadAll(response.Body)
+		respBody, _ := io.ReadAll(response.Body)
 		return fmt.Errorf("response with unexpected status code %v; %s", response.StatusCode, string(respBody))
 	}
 
-	result, err := ioutil.ReadAll(response.Body)
+	result, err := io.ReadAll(response.Body)
 	if err != nil {
 		return fmt.Errorf("reading response failed: %v", err)
 	}
