@@ -92,7 +92,7 @@ func (p *Provider) AppendRecords(ctx context.Context, zone string, records []lib
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiEndpoint+"dnsAddRecord?version=1&type=xml&key="+p.APIToken+"&domain="+zoneToDomain(zone)+"&rrtype="+record.Type+"&rrhost="+record.Name+"&rrvalue="+record.Value+rrttl+rrdistance, nil)
 		if err != nil {
-			return nil, err
+			return appendedRecords, err
 		}
 
 		var response struct {
@@ -101,11 +101,11 @@ func (p *Provider) AppendRecords(ctx context.Context, zone string, records []lib
 		}
 
 		if err := doHttpRequestWithXmlResponse(client, req, &response); err != nil {
-			return nil, fmt.Errorf("request failed: %s", err)
+			return appendedRecords, fmt.Errorf("request failed: %s", err)
 		}
 
 		if response.Code != 300 {
-			return nil, fmt.Errorf("failed to append record for zone \"%s\": Namesilo API status code %v; %s", zone, response.Code, response.Detail)
+			return appendedRecords, fmt.Errorf("failed to append record for zone \"%s\": Namesilo API status code %v; %s", zone, response.Code, response.Detail)
 		}
 
 		record.ID = response.ID
@@ -144,7 +144,7 @@ func (p *Provider) SetRecords(ctx context.Context, zone string, records []libdns
 
 	resultRecords, err := p.AppendRecords(ctx, zone, newRecords)
 	if err != nil {
-		return nil, err
+		return resultRecords, err
 	}
 
 	client := &http.Client{}
@@ -161,7 +161,7 @@ func (p *Provider) SetRecords(ctx context.Context, zone string, records []libdns
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiEndpoint+"dnsUpdateRecord?version=1&type=xml&key="+p.APIToken+"&domain="+zoneToDomain(zone)+"&rrid="+record.ID+"&rrhost="+record.Name+"&rrvalue="+record.Value+rrttl+rrdistance, nil)
 		if err != nil {
-			return nil, err
+			return resultRecords, err
 		}
 
 		var response struct {
@@ -170,11 +170,11 @@ func (p *Provider) SetRecords(ctx context.Context, zone string, records []libdns
 		}
 
 		if err := doHttpRequestWithXmlResponse(client, req, &response); err != nil {
-			return nil, fmt.Errorf("request failed: %s", err)
+			return resultRecords, fmt.Errorf("request failed: %s", err)
 		}
 
 		if response.Code != 300 {
-			return nil, fmt.Errorf("failed to append record for zone \"%s\": Namesilo API status code %v; %s", zone, response.Code, response.Detail)
+			return resultRecords, fmt.Errorf("failed to append record for zone \"%s\": Namesilo API status code %v; %s", zone, response.Code, response.Detail)
 		}
 
 		record.ID = response.ID
@@ -194,17 +194,17 @@ func (p *Provider) DeleteRecords(ctx context.Context, zone string, records []lib
 	for _, record := range records {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiEndpoint+"dnsDeleteRecord?version=1&type=xml&key="+p.APIToken+"&domain="+zoneToDomain(zone)+"&rrid="+record.ID, nil)
 		if err != nil {
-			return nil, err
+			return deletedRecords, err
 		}
 
 		var response reply
 
 		if err := doHttpRequestWithXmlResponse(client, req, &response); err != nil {
-			return nil, fmt.Errorf("request to delete record failed: %s", err)
+			return deletedRecords, fmt.Errorf("request to delete record failed: %s", err)
 		}
 
 		if response.Code != 300 {
-			return nil, fmt.Errorf("failed to delete record for zone \"%s\": Namesilo API status code %v; %s", zone, response.Code, response.Detail)
+			return deletedRecords, fmt.Errorf("failed to delete record for zone \"%s\": Namesilo API status code %v; %s", zone, response.Code, response.Detail)
 		}
 
 		deletedRecords = append(deletedRecords, record)
