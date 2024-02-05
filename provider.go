@@ -66,7 +66,7 @@ func (p *Provider) GetRecords(ctx context.Context, zone string) ([]libdns.Record
 			Name:     record.Name,
 			Value:    record.Value,
 			TTL:      time.Duration(record.TTL) * time.Second,
-			Priority: record.Priority,
+			Priority: uint(record.Priority),
 		})
 	}
 
