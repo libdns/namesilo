@@ -80,6 +80,10 @@ func (p *Provider) AppendRecords(ctx context.Context, zone string, records []lib
 	var appendedRecords []libdns.Record
 
 	for _, record := range records {
+		if record.Name == "@" {
+			record.Name = ""
+		}
+
 		rrttl := ""
 		if record.TTL != time.Duration(0) {
 			rrttl = fmt.Sprintf("&rrttl=%d", int64(record.TTL/time.Second))
@@ -132,6 +136,9 @@ func (p *Provider) SetRecords(ctx context.Context, zone string, records []libdns
 	var newRecords []libdns.Record
 	var changedRecords []libdns.Record
 	for _, record := range records {
+		if record.Name == "@" {
+			record.Name = ""
+		}
 		if record.ID == "" {
 			newRecords = append(newRecords, record)
 		} else {
