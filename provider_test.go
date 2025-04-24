@@ -14,10 +14,29 @@ var (
 )
 
 var (
-	record0ID = ""
-	record1ID = ""
-	record2ID = ""
+	record0, _ = libdns.RR{
+		Type: "CNAME",
+		Name: "test898008",
+		Data: "wikipedia.com",
+	}.Parse()
+	record0Changed, _ = libdns.RR{
+		Type: record0.RR().Type,
+		Name: record0.RR().Name,
+		Data: "google.com",
+	}.Parse()
+	record1, _ = libdns.RR{
+		Type: "CNAME",
+		Name: "test289808",
+		Data: "wikipedia.com",
+	}.Parse()
+	record2, _ = libdns.RR{
+		Type: "CNAME",
+		Name: "test652753",
+		Data: "wikipedia.com",
+	}.Parse()
 )
+
+var initialNumberOfRecords = 0
 
 func TestAppendRecords(t *testing.T) {
 
@@ -25,18 +44,13 @@ func TestAppendRecords(t *testing.T) {
 
 	ctx := context.Background()
 
-	newRecords := []libdns.Record{
-		{
-			Type:  "CNAME",
-			Name:  "test898008",
-			Value: "wikipedia.com",
-		},
-		{
-			Type:  "CNAME",
-			Name:  "test289808",
-			Value: "wikipedia.com",
-		},
+	initialRecords, err := provider.GetRecords(ctx, zone)
+	if err != nil {
+		t.Errorf("%v", err)
 	}
+	initialNumberOfRecords = len(initialRecords)
+
+	newRecords := []libdns.Record{record0, record1}
 
 	records, err := provider.AppendRecords(ctx, zone, newRecords)
 	if err != nil {
@@ -46,9 +60,6 @@ func TestAppendRecords(t *testing.T) {
 	if len(newRecords) != len(records) {
 		t.Errorf("Number of appended records does not match number of records")
 	}
-
-	record0ID = records[0].ID
-	record1ID = records[1].ID
 }
 
 func TestGetRecords(t *testing.T) {
@@ -62,8 +73,8 @@ func TestGetRecords(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 
-	if len(records) == 0 {
-		t.Errorf("No records")
+	if len(records) != initialNumberOfRecords+2 {
+		t.Errorf("invalid number of records: expected %d, got %d", initialNumberOfRecords+2, len(records))
 	}
 }
 
@@ -72,19 +83,7 @@ func TestSetRecords(t *testing.T) {
 
 	ctx := context.Background()
 
-	changedRecords := []libdns.Record{
-		{
-			Type:  "CNAME",
-			Name:  "test652753",
-			Value: "wikipedia.com",
-		},
-		{
-			ID:    record1ID,
-			Type:  "CNAME",
-			Name:  "test289808",
-			Value: "google.com",
-		},
-	}
+	changedRecords := []libdns.Record{record0Changed, record2}
 
 	records, err := provider.SetRecords(ctx, zone, changedRecords)
 	if err != nil {
@@ -94,9 +93,6 @@ func TestSetRecords(t *testing.T) {
 	if len(changedRecords) != len(records) {
 		t.Fatalf("Number of appended records does not match number of records")
 	}
-
-	record1ID = records[0].ID
-	record2ID = records[1].ID
 }
 
 func TestDeleteRecords(t *testing.T) {
@@ -105,17 +101,7 @@ func TestDeleteRecords(t *testing.T) {
 
 	ctx := context.Background()
 
-	deletedRecords := []libdns.Record{
-		{
-			ID: record0ID,
-		},
-		{
-			ID: record1ID,
-		},
-		{
-			ID: record2ID,
-		},
-	}
+	deletedRecords := []libdns.Record{record0Changed, record1, record2}
 
 	records, err := provider.DeleteRecords(ctx, zone, deletedRecords)
 	if err != nil {
@@ -124,5 +110,14 @@ func TestDeleteRecords(t *testing.T) {
 
 	if len(deletedRecords) != len(records) {
 		t.Errorf("Number of deleted records does not match number of records")
+	}
+
+	finalRecords, err := provider.GetRecords(ctx, zone)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+
+	if len(finalRecords) != initialNumberOfRecords {
+		t.Errorf("invalid number of records: expected %d, got %d", initialNumberOfRecords, len(finalRecords))
 	}
 }
