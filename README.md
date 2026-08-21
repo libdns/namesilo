@@ -32,13 +32,13 @@ func main() {
 	}
 
 	zone := os.Getenv("LIBDNS_NAMESILO_ZONE")
-	if token == "" {
+	if zone == "" {
 		fmt.Println("LIBDNS_NAMESILO_ZONE not set")
 		return
 	}
 
 	p := &namesilo.Provider{
-		AuthAPIToken: token,
+		APIToken: token,
 	}
 
 	ctx := context.Background()
