@@ -127,3 +127,73 @@ func TestNamesiloRecordMXBadPreference(t *testing.T) {
 		t.Fatal("expected an error for a non-numeric MX preference")
 	}
 }
+
+// Namesilo stores CAA and SRV values in its own colon form and keeps the SRV
+// priority in distance, so both need converting each way.
+func TestCAAandSRVConversion(t *testing.T) {
+	tests := []struct {
+		name       string
+		namesilo   record
+		libdnsData string
+	}{
+		{
+			name:       "CAA issue",
+			namesilo:   record{ID: "1", Type: "CAA", Host: "@", Value: "0:issue:letsencrypt.org", TTL: 3600},
+			libdnsData: `0 issue "letsencrypt.org"`,
+		},
+		{
+			name:       "CAA issuewild with a non-zero flag",
+			namesilo:   record{ID: "2", Type: "CAA", Host: "@", Value: "128:issuewild:letsencrypt.org", TTL: 3600},
+			libdnsData: `128 issuewild "letsencrypt.org"`,
+		},
+		{
+			name:       "SRV keeps its priority in distance",
+			namesilo:   record{ID: "3", Type: "SRV", Host: "_sip._tcp", Value: "5:5060:sip.example.com", TTL: 3600, Distance: 10},
+			libdnsData: "10 5 5060 sip.example.com",
+		},
+		{
+			name:       "SRV with priority zero",
+			namesilo:   record{ID: "4", Type: "SRV", Host: "_sip._tcp", Value: "5:5060:sip.example.com", TTL: 3600, Distance: 0},
+			libdnsData: "0 5 5060 sip.example.com",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			libdnsRecord, err := test.namesilo.toLibDNS("example.com.")
+			if err != nil {
+				t.Fatalf("converting to libdns: %v", err)
+			}
+			if got := libdnsRecord.RR().Data; got != test.libdnsData {
+				t.Errorf("expected data %q, got %q", test.libdnsData, got)
+			}
+
+			// and back again
+			got, err := namesiloRecord("example.com.", libdnsRecord)
+			if err != nil {
+				t.Fatalf("converting from libdns: %v", err)
+			}
+			if got.Value != test.namesilo.Value {
+				t.Errorf("expected value %q, got %q", test.namesilo.Value, got.Value)
+			}
+			if got.Distance != test.namesilo.Distance {
+				t.Errorf("expected distance %d, got %d", test.namesilo.Distance, got.Distance)
+			}
+			if got.Type != test.namesilo.Type {
+				t.Errorf("expected type %q, got %q", test.namesilo.Type, got.Type)
+			}
+		})
+	}
+}
+
+// A value Namesilo could not have stored should error here, not inside libdns.
+func TestCAAandSRVMalformedValues(t *testing.T) {
+	for _, rec := range []record{
+		{Type: "CAA", Host: "@", Value: "0 issue letsencrypt.org", TTL: 3600},
+		{Type: "SRV", Host: "_sip._tcp", Value: "5060:sip.example.com", TTL: 3600},
+	} {
+		if _, err := rec.toLibDNS("example.com."); err == nil {
+			t.Errorf("%s: expected an error for value %q", rec.Type, rec.Value)
+		}
+	}
+}

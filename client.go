@@ -53,7 +53,8 @@ func (p *Provider) addDNSRecord(ctx context.Context, zone string, record record)
 	qs.Set("rrtype", record.Type)
 	qs.Set("rrhost", record.Host)
 	qs.Set("rrvalue", record.Value)
-	if record.Distance != 0 {
+	// Namesilo defaults an absent rrdistance to 10, so zero must be sent.
+	if record.Type == "MX" || record.Type == "SRV" {
 		qs.Set("rrdistance", strconv.Itoa(int(record.Distance)))
 	}
 	if record.TTL != 0 {
@@ -77,7 +78,8 @@ func (p *Provider) updateDNSRecord(ctx context.Context, zone string, recordId st
 	qs.Set("rrtype", record.Type)
 	qs.Set("rrhost", record.Host)
 	qs.Set("rrvalue", record.Value)
-	if record.Distance != 0 {
+	// Namesilo defaults an absent rrdistance to 10, so zero must be sent.
+	if record.Type == "MX" || record.Type == "SRV" {
 		qs.Set("rrdistance", strconv.Itoa(int(record.Distance)))
 	}
 	if record.TTL != 0 {
