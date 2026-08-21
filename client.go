@@ -27,7 +27,7 @@ func (p *Provider) getDNSRecords(ctx context.Context, zone string) ([]record, er
 		return nil, err
 	}
 
-	var results []record
+	var results recordList
 	_, err = p.doAPIRequest(req, &results)
 	return results, err
 }

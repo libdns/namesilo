@@ -1,6 +1,7 @@
 package namesilo
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -25,6 +26,30 @@ type record struct {
 	Value    string    `json:"value"`
 	TTL      intString `json:"ttl"`
 	Distance intString `json:"distance,omitempty"`
+}
+
+// recordList holds resource_record entries, which Namesilo may send as a bare
+// object instead of a one-element array (caddy-dns/namesilo#5), or omit if empty.
+type recordList []record
+
+func (l *recordList) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+
+	if len(data) > 0 && data[0] == '{' {
+		var single record
+		if err := json.Unmarshal(data, &single); err != nil {
+			return err
+		}
+		*l = recordList{single}
+		return nil
+	}
+
+	var multiple []record
+	if err := json.Unmarshal(data, &multiple); err != nil {
+		return err
+	}
+	*l = multiple
+	return nil
 }
 
 func (n record) toLibDNS(zone string) (libdns.Record, error) {
