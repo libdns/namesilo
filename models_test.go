@@ -3,6 +3,9 @@ package namesilo
 import (
 	"encoding/json"
 	"testing"
+	"time"
+
+	"github.com/libdns/libdns"
 )
 
 // Namesilo may send resource_record as a bare object, not a one-element array,
@@ -113,5 +116,14 @@ func TestNamesiloRecordMX(t *testing.T) {
 	}
 	if got.Host != "" {
 		t.Errorf("expected an empty host for the zone apex, got %q", got.Host)
+	}
+}
+
+// A bad MX preference must error, not yield a zero record with a nil error.
+func TestNamesiloRecordMXBadPreference(t *testing.T) {
+	rr := libdns.RR{Type: "MX", Name: "@", Data: "abc mail.namesilo.com", TTL: 7207 * time.Second}
+
+	if _, err := namesiloRecord("namesilo.com.", rr); err == nil {
+		t.Fatal("expected an error for a non-numeric MX preference")
 	}
 }

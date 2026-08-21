@@ -79,7 +79,7 @@ func namesiloRecord(zone string, r libdns.Record) (record, error) {
 		value = fields[1]
 		convertedDistance, err := strconv.Atoi(fields[0])
 		if err != nil {
-			return record{}, nil
+			return record{}, fmt.Errorf("parsing MX preference %q: %v", fields[0], err)
 		}
 		distance = convertedDistance
 	}
