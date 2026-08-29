@@ -100,7 +100,7 @@ func namesiloRecord(zone string, r libdns.Record) (record, error) {
 		if expectedFields := 2; len(fields) != expectedFields {
 			return record{}, fmt.Errorf("expected data to contain %d fields, but had %d", expectedFields, len(fields))
 		}
-		value = fields[1]
+		value = strings.TrimSuffix(fields[1], ".")
 		convertedDistance, err := strconv.Atoi(fields[0])
 		if err != nil {
 			return record{}, fmt.Errorf("parsing MX preference %q: %v", fields[0], err)
@@ -123,7 +123,7 @@ func namesiloRecord(zone string, r libdns.Record) (record, error) {
 			return record{}, fmt.Errorf("parsing SRV priority %q: %v", fields[0], err)
 		}
 		distance = convertedPriority
-		value = fmt.Sprintf("%s:%s:%s", fields[1], fields[2], fields[3])
+		value = fmt.Sprintf("%s:%s:%s", fields[1], fields[2], strings.TrimSuffix(fields[3], "."))
 	}
 
 	host := rr.Name
@@ -131,6 +131,12 @@ func namesiloRecord(zone string, r libdns.Record) (record, error) {
 		host = ""
 	}
 
+	// The Namesilo API rejects FQDNs with trailing dots on hostname targets
+	// (CNAME, NS, etc.). Strip them so callers can use standard libdns FQDNs.
+	switch rr.Type {
+	case "CNAME", "NS", "ALIAS", "PTR":
+		value = strings.TrimSuffix(value, ".")
+	}
 	return record{
 		Type:     rr.Type,
 		Host:     host,

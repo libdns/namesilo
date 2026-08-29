@@ -125,8 +125,14 @@ func (p *Provider) findRecordId(ctx context.Context, zone string, recordName str
 		}
 
 		if recordType == libdnsRec.RR().Type && recordName == libdnsRec.RR().Name {
-			if len(recordValue) > 0 && recordValue[0] != "" && recordValue[0] != libdnsRec.RR().Data {
-				continue
+			if len(recordValue) > 0 && recordValue[0] != "" {
+				// Normalize trailing dots for comparison — the API stores targets
+				// without trailing dots, but callers may pass FQDNs with them.
+				want := strings.TrimSuffix(recordValue[0], ".")
+				have := strings.TrimSuffix(libdnsRec.RR().Data, ".")
+				if want != have {
+					continue
+				}
 			}
 			return rec.ID, nil
 		}
